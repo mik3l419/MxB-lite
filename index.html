@@ -1,0 +1,643 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MxB Lite - Secure Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    
+    :root {
+      --primary-green: #00ff41;
+      --secondary-green: #008f11;
+      --dark-bg: #0d1117;
+      --darker-bg: #010409;
+      --border-green: #30363d;
+      --text-gray: #8b949e;
+      --danger-red: #f85149;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+      color: #c9d1d9;
+      line-height: 1.6;
+    }
+    
+    .hacker-container {
+      background: rgba(13, 17, 23, 0.95);
+      border: 1px solid var(--border-green);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 255, 65, 0.1);
+    }
+    
+    .hacker-button {
+      background: linear-gradient(135deg, var(--secondary-green), var(--primary-green));
+      border: 1px solid var(--primary-green);
+      color: var(--darker-bg);
+      font-weight: 600;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hacker-button:hover {
+      box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+      transform: translateY(-1px);
+    }
+    
+    .hacker-button:active {
+      transform: translateY(0);
+    }
+    
+    .hacker-input {
+      background: rgba(13, 17, 23, 0.8);
+      border: 1px solid var(--border-green);
+      color: var(--primary-green);
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.3s ease;
+    }
+    
+    .hacker-input:focus {
+      outline: none;
+      border-color: var(--primary-green);
+      box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+      background: rgba(13, 17, 23, 0.95);
+    }
+    
+    .hacker-input::placeholder {
+      color: var(--text-gray);
+      font-size: 0.9em;
+    }
+    
+    .terminal-header {
+      background: var(--darker-bg);
+      border-bottom: 1px solid var(--border-green);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    .terminal-red { background: var(--danger-red); }
+    .terminal-yellow { background: #d29922; }
+    .terminal-green { background: var(--primary-green); }
+    
+    .tab-active {
+      background: linear-gradient(135deg, var(--secondary-green), var(--primary-green)) !important;
+      color: var(--darker-bg) !important;
+      box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+    }
+    
+    .scan-line {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary-green), transparent);
+      animation: scan 2s linear infinite;
+    }
+    
+    @keyframes scan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary-green);
+      animation: pulse 2s infinite;
+      margin-right: 0.5rem;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .grid-pattern {
+      background-image: 
+        linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    .item-card {
+      background: rgba(13, 17, 23, 0.6);
+      border: 1px solid var(--border-green);
+      transition: all 0.3s ease;
+    }
+    
+    .item-card:hover {
+      border-color: var(--primary-green);
+      background: rgba(13, 17, 23, 0.8);
+      box-shadow: 0 4px 16px rgba(0, 255, 65, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+      .mobile-stack {
+        flex-direction: column;
+      }
+      
+      .mobile-full {
+        width: 100%;
+      }
+      
+      .mobile-text-sm {
+        font-size: 0.875rem;
+      }
+      
+      .mobile-p-2 {
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen p-2 sm:p-4 pb-12 grid-pattern">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="hacker-container rounded-lg mb-4 sm:mb-6">
+      <div class="terminal-header rounded-t-lg">
+        <div class="terminal-dot terminal-red"></div>
+        <div class="terminal-dot terminal-yellow"></div>
+        <div class="terminal-dot terminal-green"></div>
+        <span class="text-xs sm:text-sm text-gray-400 ml-2">root@mxb-portal:~$</span>
+      </div>
+      <div class="p-4 sm:p-6 text-center">
+        <h1 class="text-2xl sm:text-4xl lg:text-5xl font-bold mb-2 text-green-400">MxB LITE</h1>
+        <p class="text-sm sm:text-base text-gray-400 mb-3">
+          <span class="status-indicator"></span>SECURE PORTAL INTERFACE
+        </p>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+
+    <!-- Search Terminal -->
+    <div class="hacker-container rounded-lg mb-4 sm:mb-6">
+      <div class="terminal-header rounded-t-lg">
+        <span class="text-xs text-gray-400">search.exe</span>
+      </div>
+      <div class="p-3 sm:p-4">
+        <input 
+          id="searchBox" 
+          type="text" 
+          placeholder="$ grep -r 'keyword' database/" 
+          class="hacker-input w-full px-3 py-2 sm:py-3 text-sm sm:text-base rounded"
+          oninput="applySearch()"
+        >
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
+      <button onclick="switchTab('apps')" class="tab-btn hacker-button tab-active mobile-full px-3 py-2 sm:px-4 sm:py-3 rounded text-xs sm:text-sm font-semibold">
+        📱 APPS
+      </button>
+      <button onclick="switchTab('documents')" class="tab-btn hacker-button bg-gray-800 text-green-400 mobile-full px-3 py-2 sm:px-4 sm:py-3 rounded text-xs sm:text-sm font-semibold">
+        📄 DOCS
+      </button>
+      <button onclick="switchTab('links')" class="tab-btn hacker-button bg-gray-800 text-green-400 mobile-full px-3 py-2 sm:px-4 sm:py-3 rounded text-xs sm:text-sm font-semibold">
+        🔗 LINKS
+      </button>
+      <button onclick="switchTab('admin')" class="tab-btn hacker-button bg-red-900 text-red-400 mobile-full px-3 py-2 sm:px-4 sm:py-3 rounded text-xs sm:text-sm font-semibold">
+        ⚡ ADMIN
+      </button>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin" class="tab hidden">
+      <div class="hacker-container rounded-lg">
+        <div class="terminal-header rounded-t-lg">
+          <span class="text-xs text-red-400">admin-access.exe</span>
+        </div>
+        <div class="p-4 sm:p-6">
+          <h2 class="text-lg sm:text-xl font-bold mb-4 text-red-400 text-center">RESTRICTED ACCESS</h2>
+          <div class="space-y-3">
+            <input 
+              id="adminPass" 
+              type="password" 
+              placeholder="Enter security token..." 
+              class="hacker-input w-full px-3 py-2 sm:py-3 text-sm sm:text-base rounded"
+            >
+            <button onclick="checkAdmin()" class="hacker-button w-full py-2 sm:py-3 rounded font-semibold text-sm sm:text-base">
+              AUTHENTICATE
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Panel -->
+    <div id="upload" class="tab hidden">
+      <div class="hacker-container rounded-lg">
+        <div class="terminal-header rounded-t-lg">
+          <span class="text-xs text-green-400">upload-manager.exe</span>
+        </div>
+        <div class="p-4 sm:p-6">
+          <h2 class="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-center text-green-400">UPLOAD CONTROL PANEL</h2>
+
+          <div class="grid lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- APK Upload -->
+            <div class="hacker-container rounded-lg mobile-full">
+              <div class="terminal-header rounded-t-lg">
+                <span class="text-xs text-green-400">app-upload.exe</span>
+              </div>
+              <div class="p-3 sm:p-4">
+                <form id="apkForm" class="space-y-3">
+                  <input type="text" id="apkName" placeholder="Application name..." class="hacker-input w-full px-3 py-2 text-sm rounded" required>
+                  <input type="file" id="apkFile" class="hacker-input w-full px-3 py-2 text-sm rounded" accept=".apk" required>
+                  <button class="hacker-button w-full py-2 rounded font-semibold text-sm" type="submit">UPLOAD</button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Document Upload -->
+            <div class="hacker-container rounded-lg mobile-full">
+              <div class="terminal-header rounded-t-lg">
+                <span class="text-xs text-blue-400">doc-upload.exe</span>
+              </div>
+              <div class="p-3 sm:p-4">
+                <form id="docForm" class="space-y-3">
+                  <input type="text" id="docName" placeholder="Document title..." class="hacker-input w-full px-3 py-2 text-sm rounded" required>
+                  <input type="file" id="docFile" class="hacker-input w-full px-3 py-2 text-sm rounded" accept=".pdf,.doc,.docx" required>
+                  <button class="hacker-button w-full py-2 rounded font-semibold text-sm" type="submit">UPLOAD</button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Link Submit -->
+            <div class="hacker-container rounded-lg mobile-full">
+              <div class="terminal-header rounded-t-lg">
+                <span class="text-xs text-purple-400">link-submit.exe</span>
+              </div>
+              <div class="p-3 sm:p-4">
+                <form id="linkForm" class="space-y-3">
+                  <input type="text" id="linkName" placeholder="Link title..." class="hacker-input w-full px-3 py-2 text-sm rounded" required>
+                  <input type="url" id="linkUrl" placeholder="https://..." class="hacker-input w-full px-3 py-2 text-sm rounded" required>
+                  <button class="hacker-button w-full py-2 rounded font-semibold text-sm" type="submit">SUBMIT</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Sections -->
+    <div id="apps" class="tab">
+      <div class="hacker-container rounded-lg">
+        <div class="terminal-header rounded-t-lg">
+          <span class="text-xs text-green-400">applications.db</span>
+        </div>
+        <div class="p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-green-400">AVAILABLE APPLICATIONS</h2>
+            <button onclick="refreshData('apps')" class="hacker-button px-3 py-1 rounded text-xs font-semibold hover:scale-105 transition-transform">
+              🔄 REFRESH
+            </button>
+          </div>
+          <div id="apkList" class="space-y-3">
+            <div id="apkLoader" class="text-center py-8">
+              <div class="status-indicator inline-block mr-2"></div>
+              <span class="text-gray-400">LOADING APPLICATIONS...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="documents" class="tab hidden">
+      <div class="hacker-container rounded-lg">
+        <div class="terminal-header rounded-t-lg">
+          <span class="text-xs text-blue-400">documents.db</span>
+        </div>
+        <div class="p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-blue-400">DOCUMENT ARCHIVE</h2>
+            <button onclick="refreshData('documents')" class="hacker-button px-3 py-1 rounded text-xs font-semibold hover:scale-105 transition-transform">
+              🔄 REFRESH
+            </button>
+          </div>
+          <div id="docList" class="space-y-3">
+            <div id="docLoader" class="text-center py-8">
+              <div class="status-indicator inline-block mr-2"></div>
+              <span class="text-gray-400">LOADING DOCUMENTS...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="links" class="tab hidden">
+      <div class="hacker-container rounded-lg">
+        <div class="terminal-header rounded-t-lg">
+          <span class="text-xs text-purple-400">links.db</span>
+        </div>
+        <div class="p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-purple-400">LINK REPOSITORY</h2>
+            <button onclick="refreshData('links')" class="hacker-button px-3 py-1 rounded text-xs font-semibold hover:scale-105 transition-transform">
+              🔄 REFRESH
+            </button>
+          </div>
+          <div id="linkList" class="space-y-3">
+            <div id="linkLoader" class="text-center py-8">
+              <div class="status-indicator inline-block mr-2"></div>
+              <span class="text-gray-400">LOADING LINKS...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright Banner -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-900 via-black to-gray-900 border-t border-green-400 z-50 backdrop-blur-sm">
+      <div class="max-w-6xl mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="status-indicator"></div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+              <span class="text-xs sm:text-sm text-green-400 font-bold tracking-wider">© 2024 MxB LITE™</span>
+              <span class="hidden sm:inline text-xs text-gray-500">|</span>
+              <span class="text-xs text-gray-400 font-medium">SECURE PORTAL INTERFACE</span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2 text-xs text-gray-500">
+            <span>v1.0.0</span>
+            <span>•</span>
+            <span id="onlineStatus" class="text-green-400">ONLINE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Supabase
+    let supabaseClient;
+    
+    window.addEventListener('load', () => {
+      if (typeof supabase !== 'undefined') {
+        const { createClient } = supabase;
+        supabaseClient = createClient('https://buswluszzfbbezcgwbty.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1c3dsdXN6emZiYmV6Y2d3YnR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEwMDY2NDUsImV4cCI6MjA2NjU4MjY0NX0.eX_qEDabyqj0AWeqiwVXko9W4OYg3H9PYNxd5fPKis0');
+        loadData();
+      } else {
+        console.error('Supabase library not loaded');
+      }
+    });
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(div => div.classList.add('hidden'));
+      document.getElementById(tab).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('tab-active');
+        btn.classList.add('bg-gray-800', 'text-green-400');
+      });
+      event.target.classList.add('tab-active');
+      event.target.classList.remove('bg-gray-800', 'text-green-400');
+    }
+
+    function checkAdmin() {
+      const pass = document.getElementById('adminPass').value;
+      if (pass === 'MIKE') {
+        switchTab('upload');
+        document.getElementById('adminPass').value = '';
+      } else {
+        alert('ACCESS DENIED - INVALID TOKEN');
+      }
+    }
+
+    function applySearch() {
+      const term = document.getElementById("searchBox").value.toLowerCase();
+      ["apkList", "docList", "linkList"].forEach(id => {
+        const items = document.getElementById(id).children;
+        for (const item of items) {
+          item.style.display = item.textContent.toLowerCase().includes(term) ? "block" : "none";
+        }
+      });
+    }
+
+    function formatSize(bytes) {
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      if (bytes == 0) return '0 B';
+      const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+      return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+    }
+
+    function createItemElement(icon, name, size, type, url, isLink = false) {
+      const actionText = isLink ? 'ACCESS' : 'DOWNLOAD';
+      const typeDisplay = size ? `${size} • ${type}` : type || 'External Link';
+      const downloadAttr = isLink ? '' : `download="${name}"`;
+      const onClick = isLink ? '' : `onclick="downloadFile('${url}', '${name}')"`;
+      
+      return `
+        <div class="item-card rounded-lg p-3 sm:p-4 mobile-stack flex items-center justify-between hover:bg-opacity-70 transition-all">
+          <div class="flex items-center space-x-3 flex-1 min-w-0">
+            <div class="flex-shrink-0">${getIconForType(type, isLink)}</div>
+            <div class="min-w-0 flex-1">
+              <div class="font-semibold text-green-400 truncate text-sm sm:text-base">${name}</div>
+              <div class="text-xs text-gray-400">${typeDisplay}</div>
+            </div>
+          </div>
+          <a href="${url}" ${downloadAttr} ${onClick} target="${isLink ? '_blank' : '_self'}" class="hacker-button px-3 py-1 sm:px-4 sm:py-2 rounded font-semibold text-xs sm:text-sm hover:scale-105 transition-transform ml-2 whitespace-nowrap">
+            ${actionText}
+          </a>
+        </div>
+      `;
+    }
+
+    function getIconForType(type, isLink) {
+      if (isLink) return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">🔗</div>';
+      if (type === '.apk') return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-green-600 rounded flex items-center justify-center text-white font-bold text-xs">APK</div>';
+      if (type === 'pdf') return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-red-600 rounded flex items-center justify-center text-white font-bold text-xs">PDF</div>';
+      if (type === 'doc' || type === 'docx') return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs">DOC</div>';
+      if (type === 'txt') return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-600 rounded flex items-center justify-center text-white font-bold text-xs">TXT</div>';
+      if (type === 'jpg' || type === 'jpeg' || type === 'png' || type === 'gif') return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-600 rounded flex items-center justify-center text-white font-bold text-xs">IMG</div>';
+      if (type === 'zip' || type === 'rar' || type === '7z') return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-orange-600 rounded flex items-center justify-center text-white font-bold text-xs">ZIP</div>';
+      return '<div class="w-8 h-8 sm:w-10 sm:h-10 bg-gray-500 rounded flex items-center justify-center text-white font-bold text-xs">FILE</div>';
+    }
+
+    // Form submissions
+    document.getElementById('apkForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!supabaseClient) return alert('SYSTEM NOT READY - PLEASE WAIT');
+      
+      const name = document.getElementById('apkName').value;
+      const file = document.getElementById('apkFile').files[0];
+      const path = `apks/${Date.now()}_${file.name}`;
+      
+      try {
+        const { error: uploadErr } = await supabaseClient.storage.from('uploads').upload(path, file);
+        if (uploadErr) throw uploadErr;
+        
+        const url = supabaseClient.storage.from('uploads').getPublicUrl(path).data.publicUrl;
+        const size = formatSize(file.size);
+        
+        await supabaseClient.from('apk_files').insert([{ name, url, size, type: '.apk' }]);
+        
+        refreshData('apps');
+        e.target.reset();
+        alert('APPLICATION UPLOADED SUCCESSFULLY');
+      } catch (error) {
+        alert('UPLOAD FAILED: ' + error.message);
+      }
+    });
+
+    document.getElementById('docForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!supabaseClient) return alert('SYSTEM NOT READY - PLEASE WAIT');
+      
+      const name = document.getElementById('docName').value;
+      const file = document.getElementById('docFile').files[0];
+      const path = `documents/${Date.now()}_${file.name}`;
+      
+      try {
+        const { error: uploadErr } = await supabaseClient.storage.from('uploads').upload(path, file);
+        if (uploadErr) throw uploadErr;
+        
+        const url = supabaseClient.storage.from('uploads').getPublicUrl(path).data.publicUrl;
+        const size = formatSize(file.size);
+        const type = file.name.split('.').pop().toLowerCase();
+        
+        await supabaseClient.from('documents').insert([{ name, url, size, type }]);
+        
+        refreshData('documents');
+        e.target.reset();
+        alert('DOCUMENT UPLOADED SUCCESSFULLY');
+      } catch (error) {
+        alert('UPLOAD FAILED: ' + error.message);
+      }
+    });
+
+    document.getElementById('linkForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!supabaseClient) return alert('SYSTEM NOT READY - PLEASE WAIT');
+      
+      const name = document.getElementById('linkName').value;
+      const url = document.getElementById('linkUrl').value;
+      
+      try {
+        await supabaseClient.from('links').insert([{ name, url }]);
+        refreshData('links');
+        e.target.reset();
+        alert('LINK SUBMITTED SUCCESSFULLY');
+      } catch (error) {
+        alert('SUBMISSION FAILED: ' + error.message);
+      }
+    });
+
+    // Download function for files
+    function downloadFile(url, filename) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Refresh specific data type
+    async function refreshData(type) {
+      if (!supabaseClient) return;
+      
+      try {
+        if (type === 'apps') {
+          document.getElementById('apkList').innerHTML = '<div class="text-center py-4"><div class="status-indicator inline-block mr-2"></div><span class="text-gray-400">REFRESHING...</span></div>';
+          const { data: apks } = await supabaseClient.from('apk_files').select('*');
+          document.getElementById('apkList').innerHTML = '';
+          if (apks && apks.length > 0) {
+            apks.forEach(apk => {
+              document.getElementById('apkList').innerHTML += createItemElement('📱', apk.name, apk.size, apk.type, apk.url);
+            });
+          } else {
+            document.getElementById('apkList').innerHTML = '<div class="text-center py-8 text-gray-500">NO APPLICATIONS FOUND</div>';
+          }
+        } else if (type === 'documents') {
+          document.getElementById('docList').innerHTML = '<div class="text-center py-4"><div class="status-indicator inline-block mr-2"></div><span class="text-gray-400">REFRESHING...</span></div>';
+          const { data: docs } = await supabaseClient.from('documents').select('*');
+          document.getElementById('docList').innerHTML = '';
+          if (docs && docs.length > 0) {
+            docs.forEach(doc => {
+              document.getElementById('docList').innerHTML += createItemElement('📄', doc.name, doc.size, doc.type, doc.url);
+            });
+          } else {
+            document.getElementById('docList').innerHTML = '<div class="text-center py-8 text-gray-500">NO DOCUMENTS FOUND</div>';
+          }
+        } else if (type === 'links') {
+          document.getElementById('linkList').innerHTML = '<div class="text-center py-4"><div class="status-indicator inline-block mr-2"></div><span class="text-gray-400">REFRESHING...</span></div>';
+          const { data: links } = await supabaseClient.from('links').select('*');
+          document.getElementById('linkList').innerHTML = '';
+          if (links && links.length > 0) {
+            links.forEach(link => {
+              document.getElementById('linkList').innerHTML += createItemElement('🔗', link.name, '', '', link.url, true);
+            });
+          } else {
+            document.getElementById('linkList').innerHTML = '<div class="text-center py-8 text-gray-500">NO LINKS FOUND</div>';
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing data:', error);
+        const targetList = type === 'apps' ? 'apkList' : type === 'documents' ? 'docList' : 'linkList';
+        document.getElementById(targetList).innerHTML = '<div class="text-center py-8 text-red-400">ERROR LOADING DATA</div>';
+      }
+    }
+
+    // Load existing data
+    async function loadData() {
+      if (!supabaseClient) return;
+      
+      try {
+        // Load APKs
+        const { data: apks } = await supabaseClient.from('apk_files').select('*');
+        document.getElementById('apkLoader').style.display = 'none';
+        if (apks && apks.length > 0) {
+          apks.forEach(apk => {
+            document.getElementById('apkList').innerHTML += createItemElement('📱', apk.name, apk.size, apk.type, apk.url);
+          });
+        } else {
+          document.getElementById('apkList').innerHTML += '<div class="text-center py-8 text-gray-500">NO APPLICATIONS FOUND</div>';
+        }
+
+        // Load Documents
+        const { data: docs } = await supabaseClient.from('documents').select('*');
+        document.getElementById('docLoader').style.display = 'none';
+        if (docs && docs.length > 0) {
+          docs.forEach(doc => {
+            document.getElementById('docList').innerHTML += createItemElement('📄', doc.name, doc.size, doc.type, doc.url);
+          });
+        } else {
+          document.getElementById('docList').innerHTML += '<div class="text-center py-8 text-gray-500">NO DOCUMENTS FOUND</div>';
+        }
+
+        // Load Links
+        const { data: links } = await supabaseClient.from('links').select('*');
+        document.getElementById('linkLoader').style.display = 'none';
+        if (links && links.length > 0) {
+          links.forEach(link => {
+            document.getElementById('linkList').innerHTML += createItemElement('🔗', link.name, '', '', link.url, true);
+          });
+        } else {
+          document.getElementById('linkList').innerHTML += '<div class="text-center py-8 text-gray-500">NO LINKS FOUND</div>';
+        }
+
+        // Update online status
+        document.getElementById('onlineStatus').textContent = 'ONLINE';
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('onlineStatus').textContent = 'ERROR';
+        document.getElementById('onlineStatus').className = 'text-red-400';
+      }
+    }
+  </script>
+</body>
+</html>
